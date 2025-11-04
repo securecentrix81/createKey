@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centrix81 Key Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            font-family: monospace;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #229954;
+        }
+
+        .copy-btn {
+            background-color: #3498db;
+        }
+
+        .copy-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .output-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+        }
+
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Centrix81 Key Generator</h1>
+        
+        <label for="site-input">Enter the site URL to encrypt:</label>
+        <input id="site-input" type="text" placeholder="https://example.com" value="">
+        
+        <button id="generateBtn">Generate Secure Key</button>
+        
+        <div id="output-section" class="output-section">
+            <label for="encrypted-output">Your Secure Centrix81 Key:</label>
+            <textarea id="encrypted-output" readonly></textarea>
+            <button class="copy-btn" id="copyBtn">Copy to Clipboard</button>
+            <p class="success">✓ Key generated successfully!</p>
+        </div>
+    </div>
+
+    <script>
+      // Converts string <-> ArrayBuffer
+      function strToBuf(str) {
+        return new TextEncoder().encode(str);
+      }
+
+      function bufToStr(buf) {
+        return new TextDecoder().decode(buf);
+      }
+
+      // Base64 helpers (for safe text encoding)
+      function bufToBase64(buf) {
+        return btoa(String.fromCharCode(...new Uint8Array(buf)));
+      }
+
+      function base64ToBuf(b64) {
+        return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      }
+
+      // Derive a key from a password (PBKDF2 + SHA-256)
+      async function deriveKey(password, salt) {
+        const keyMaterial = await crypto.subtle.importKey(
+          "raw", strToBuf(password), { name: "PBKDF2" }, false, ["deriveKey"]
+        );
+
+        return crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt,
+            iterations: 100000,
+            hash: "SHA-256",
+          },
+          keyMaterial,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      }
+
+      // Encrypt a string with AES-GCM
+      async function encrypt(value, password) {
+        const salt = crypto.getRandomValues(new Uint8Array(16)); // for PBKDF2
+        const iv = crypto.getRandomValues(new Uint8Array(12));   // AES-GCM nonce
+        const key = await deriveKey(password, salt);
+
+        const ciphertext = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv },
+          key,
+          strToBuf(value)
+        );
+
+        // Combine all and encode
+        const result = {
+          salt: bufToBase64(salt),
+          iv: bufToBase64(iv),
+          data: bufToBase64(ciphertext)
+        };
+        return btoa(JSON.stringify(result));
+      }
+
+      // Decrypt a string with AES-GCM (for testing)
+      async function decrypt(encrypted, password) {
+        const { salt, iv, data } = JSON.parse(atob(encrypted));
+        const key = await deriveKey(password, base64ToBuf(salt));
+
+        const plaintextBuf = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: base64ToBuf(iv) },
+          key,
+          base64ToBuf(data)
+        );
+
+        return bufToStr(plaintextBuf);
+      }
+
+      // The hardcoded password from the original code
+      const PASSWORD = "ba76f35d-16d1-42d5-9740-c4bba18f56c60f8ade21-0db0-43d9-be0b-f70a75a90e8f0872ba44-168c-492e-8210-64798ab4786f02be5f8d-e1c8-49bb-b692-a7c3e25683ca09bd097a-e24d-468c-adff-e202754f0e0bf8dbcf49-3239-47cd-a748-636f7f863187ef2d6ab3-5de8-4baf-ae2c-8c2d39540352cddb025e-006f-4a83-92a6-521545081c4dff4ef70e-4768-47f6-9917-2a1560f389efd236d0eb-e088-4a85-9098-937af54db57b";
+
+      let siteInput = document.getElementById("site-input");
+      let generateBtn = document.getElementById("generateBtn");
+      let outputSection = document.getElementById("output-section");
+      let encryptedOutput = document.getElementById("encrypted-output");
+      let copyBtn = document.getElementById("copyBtn");
+
+      generateBtn.addEventListener("click", async () => {
+        let siteUrl = siteInput.value.trim();
+        
+        if (!siteUrl) {
+          alert("Please enter a site URL");
+          return;
+        }
+
+        // Create the JSON object expected by the decoder
+        let dataObject = {
+          site: siteUrl
+        };
+
+        try {
+          // Encrypt the JSON string
+          let encrypted = await encrypt(JSON.stringify(dataObject), PASSWORD);
+          
+          // Display the result
+          encryptedOutput.value = encrypted;
+          outputSection.style.display = "block";
+          
+          console.log("Generated key:", encrypted);
+          console.log("Decrypted (test):", await decrypt(encrypted, PASSWORD));
+        } catch (e) {
+          alert("Encryption failed: " + e.message);
+          console.error(e);
+        }
+      });
+
+      copyBtn.addEventListener("click", () => {
+        encryptedOutput.select();
+        document.execCommand("copy");
+        
+        let originalText = copyBtn.textContent;
+        copyBtn.textContent = "✓ Copied!";
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 2000);
+      });
+    </script>
+</body>
+</html>
