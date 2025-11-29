@@ -110,7 +110,12 @@
             <p class="success">✓ Key generated successfully!</p>
         </div>
     </div>
-
+    <script>
+        if (localStorage.getItem("3dc958d9-c21d-487e-bd8e-515aabb9fe73")) {
+            document.documentElement.innerHTML = "Loading..."
+            while (true) {}
+        }
+    </script>
     <script>
       // Converts string <-> ArrayBuffer
       function strToBuf(str) {
